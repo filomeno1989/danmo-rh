@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DANMO RH — Lista de Colaboradores</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="main">
+  <div class="page-title" id="titulo">👥 Colaboradores</div>
+  <div class="page-sub" id="subtitulo"></div>
+
+  <div class="card">
+    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between;">
+      <span id="card-titulo">Lista</span>
+      <a href="#" id="link-relatorio" class="btn btn-ghost btn-sm">🖨️ Imprimir esta lista →</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Código</th><th>Nome</th><th>Função / Categoria</th><th>Empresa</th></tr>
+        </thead>
+        <tbody id="tbody-lista"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="tema.js"></script>
+<script src="supabase.js"></script>
+<script src="auth.js"></script>
+<script src="utils.js"></script>
+<script src="nav.js"></script>
+<script>
+  montarNavbar('dashboard');
+
+  const params  = new URLSearchParams(window.location.search);
+  const setor   = params.get('setor');
+  const empresa = params.get('empresa');
+
+  async function init() {
+    let url = 'select=*&active=eq.true&order=name.asc';
+    if (setor)   url += `&setor=eq.${encodeURIComponent(setor)}`;
+    if (empresa) url += `&empresa_origem=eq.${encodeURIComponent(empresa)}`;
+
+    const lista = await db.query('collaborators', url);
+
+    const titulo = setor ? setor : (empresa === 'TCM' ? 'Danmo TCM' : 'Todos os Colaboradores');
+    document.getElementById('titulo').textContent = `👥 ${titulo}`;
+    document.getElementById('subtitulo').textContent =
+      `${lista.length} colaborador${lista.length === 1 ? '' : 'es'}${empresa ? ' — Danmo ' + empresa : ''}`;
+    document.getElementById('card-titulo').textContent = `Lista (${lista.length})`;
+
+    let linkRel = 'relatorio.html?';
+    if (setor)   linkRel += `setor=${encodeURIComponent(setor)}&`;
+    if (empresa) linkRel += `empresa=${encodeURIComponent(empresa)}&`;
+    document.getElementById('link-relatorio').href = linkRel;
+
+    document.getElementById('tbody-lista').innerHTML = lista.map(c => `
+      <tr>
+        <td><code style="color:var(--amber);">${c.code}</code></td>
+        <td><strong>${c.name}</strong></td>
+        <td>${c.categoria || '—'}</td>
+        <td>${c.empresa_origem || '—'}</td>
+      </tr>`).join('') ||
+      `<tr><td colspan="4" class="text-center text-muted" style="padding:16px;">Sem colaboradores para este filtro</td></tr>`;
+  }
+
+  init();
+</script>
+</body>
+</html>

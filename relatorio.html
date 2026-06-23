@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DANMO RH — Relatório de Pessoal</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff; color: #000; }
+      .main { max-width: none; padding: 0; }
+    }
+    .relatorio { font-family: 'Times New Roman', Times, serif; color: #000; background: #fff;
+                 padding: 32px; max-width: 900px; margin: 24px auto; border-radius: 4px; }
+    .relatorio h1 { font-size: 20px; text-align: center; margin-bottom: 4px; }
+    .relatorio h2 { font-size: 14px; text-align: center; color: #444; margin-bottom: 24px; font-weight: normal; }
+    .rel-setor { margin-bottom: 22px; }
+    .rel-setor h3 { font-size: 15px; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 8px; }
+    .rel-setor table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .rel-setor th, .rel-setor td { border: 1px solid #999; padding: 5px 8px; text-align: left; }
+    .rel-setor th { background: #eee; }
+  </style>
+</head>
+<body>
+
+<div class="main no-print">
+  <div class="page-title">📄 Relatório de Pessoal</div>
+  <div class="page-sub">Pré-visualização — usa Ctrl+P (ou Cmd+P) para imprimir / guardar em PDF</div>
+  <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>
+</div>
+
+<div class="relatorio" id="relatorio">
+  <h1>DANMO Service System, Lda</h1>
+  <h2 id="rel-subtitulo">Relatório de Quadro de Pessoal</h2>
+  <div id="rel-conteudo">A carregar…</div>
+</div>
+
+<script src="supabase.js"></script>
+<script>
+  const SETORES_PORTO = [
+    'Mecânica', 'Elétrica', 'Serralharia', 'Pneumática',
+    'Administração Oficinal', 'Departamento Técnico', 'Direção Geral', 'HST'
+  ];
+
+  const params  = new URLSearchParams(window.location.search);
+  const setor   = params.get('setor');
+  const empresa = params.get('empresa');
+
+  function tabela(titulo, lista) {
+    if (lista.length === 0) {
+      return `<div class="rel-setor"><h3>${titulo} (0 pessoas)</h3><p>Sem colaboradores.</p></div>`;
+    }
+    return `<div class="rel-setor">
+      <h3>${titulo} (${lista.length} pessoa${lista.length === 1 ? '' : 's'})</h3>
+      <table>
+        <thead><tr><th>Código</th><th>Nome</th><th>Função / Categoria</th></tr></thead>
+        <tbody>
+          ${lista.map(c => `<tr><td>${c.code}</td><td>${c.name}</td><td>${c.categoria || '—'}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  async function init() {
+    const todos = await db.query('collaborators', 'select=*&active=eq.true&order=name.asc');
+    let html = '';
+    let subtitulo = 'Relatório de Quadro de Pessoal';
+
+    if (setor) {
+      // Relatório de um único setor
+      const lista = todos.filter(c => c.setor === setor && (!empresa || c.empresa_origem === empresa));
+      subtitulo = `Setor: ${setor}`;
+      html = tabela(setor, lista);
+
+    } else if (empresa === 'TCM') {
+      // Relatório só TCM
+      const lista = todos.filter(c => c.empresa_origem === 'TCM');
+      subtitulo = 'Danmo TCM';
+      html = tabela('Danmo TCM', lista);
+
+    } else if (empresa === 'Porto') {
+      // Relatório completo Porto, setor a setor
+      subtitulo = 'Danmo Porto — Por Setor';
+      html = SETORES_PORTO.map(s => tabela(s, todos.filter(c => c.setor === s && c.empresa_origem === 'Porto'))).join('');
+
+    } else {
+      // Relatório geral: Porto por setor + TCM
+      subtitulo = 'Danmo Porto e Danmo TCM — Quadro Completo';
+      html  = SETORES_PORTO.map(s => tabela(s, todos.filter(c => c.setor === s && c.empresa_origem === 'Porto'))).join('');
+      html += tabela('Danmo TCM', todos.filter(c => c.empresa_origem === 'TCM'));
+    }
+
+    document.getElementById('rel-subtitulo').textContent = subtitulo;
+    document.getElementById('rel-conteudo').innerHTML = html;
+  }
+
+  init();
+</script>
+</body>
+</html>

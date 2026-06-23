@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DANMO RH — Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <style>.btn-filtro.active { border-color: var(--amber); color: var(--amber); }</style>
+</head>
+<body>
+
+<div class="main">
+  <div class="page-title">👥 Quadro de Pessoal</div>
+  <div class="page-sub" id="data-hoje"></div>
+
+  <div class="flex gap-8 mt-16" style="margin-bottom:20px;">
+    <button class="btn btn-ghost btn-filtro active" data-filtro="todos" onclick="filtrar('todos')">Todos</button>
+    <button class="btn btn-ghost btn-filtro" data-filtro="Porto" onclick="filtrar('Porto')">Danmo Porto</button>
+    <button class="btn btn-ghost btn-filtro" data-filtro="TCM" onclick="filtrar('TCM')">Danmo TCM</button>
+  </div>
+
+  <div class="kpi-grid" style="margin-bottom:8px;">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Total Geral (filtro actual)</div>
+      <div class="kpi-value" id="kpi-total">—</div>
+      <div class="kpi-sub" id="kpi-total-sub">colaboradores activos</div>
+    </div>
+  </div>
+
+  <div id="secao-porto">
+    <div class="page-sub" style="margin-top:24px; margin-bottom:12px; font-weight:700; color:var(--text);">Danmo Porto — por Setor</div>
+    <div class="kpi-grid" id="grid-setores"></div>
+  </div>
+
+  <div id="secao-tcm">
+    <div class="page-sub" style="margin-top:24px; margin-bottom:12px; font-weight:700; color:var(--text);">Danmo TCM</div>
+    <div class="card">
+      <div class="card-title" style="display:flex; align-items:center; justify-content:space-between;">
+        <span>🏢 Quadro Administrativo / Direcção</span>
+        <a href="setor.html?empresa=TCM" class="btn btn-ghost btn-sm">Ver lista completa →</a>
+      </div>
+      <div class="kpi-value" id="kpi-tcm-total" style="margin-bottom:12px;">—</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Função / Categoria</th><th>Nº de Pessoas</th></tr></thead>
+          <tbody id="tbody-tcm-categorias"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="tema.js"></script>
+<script src="supabase.js"></script>
+<script src="auth.js"></script>
+<script src="utils.js"></script>
+<script src="nav.js"></script>
+<script>
+  montarNavbar('dashboard');
+
+  const SETORES_PORTO = [
+    'Mecânica', 'Elétrica', 'Serralharia', 'Pneumática',
+    'Administração Oficinal', 'Departamento Técnico', 'Direção Geral', 'HST'
+  ];
+
+  const agora = new Date();
+  document.getElementById('data-hoje').textContent =
+    agora.toLocaleDateString('pt-MZ', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+
+  let TODOS = [];
+
+  async function init() {
+    TODOS = await db.query('collaborators', 'select=*&active=eq.true&order=name.asc');
+    filtrar('todos');
+  }
+
+  function filtrar(tipo) {
+    document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.btn-filtro[data-filtro="${tipo}"]`).classList.add('active');
+
+    let lista = TODOS.filter(c => c.empresa_origem); // ignora os 7 sem empresa definida ainda
+    if (tipo === 'Porto') lista = lista.filter(c => c.empresa_origem === 'Porto');
+    if (tipo === 'TCM')   lista = lista.filter(c => c.empresa_origem === 'TCM');
+
+    document.getElementById('kpi-total').textContent = lista.length;
+
+    document.getElementById('secao-porto').style.display = (tipo === 'TCM') ? 'none' : 'block';
+    document.getElementById('secao-tcm').style.display   = (tipo === 'Porto') ? 'none' : 'block';
+
+    // Cartões por setor (Porto)
+    const porto = lista.filter(c => c.empresa_origem === 'Porto');
+    document.getElementById('grid-setores').innerHTML = SETORES_PORTO.map(s => {
+      const n = porto.filter(c => c.setor === s).length;
+      return `<a href="setor.html?setor=${encodeURIComponent(s)}&empresa=Porto" style="text-decoration:none;">
+        <div class="kpi-card">
+          <div class="kpi-label">${s}</div>
+          <div class="kpi-value">${n}</div>
+          <div class="kpi-sub">colaborador${n === 1 ? '' : 'es'} — ver lista →</div>
+        </div>
+      </a>`;
+    }).join('');
+
+    // TCM breakdown
+    const tcm = lista.filter(c => c.empresa_origem === 'TCM');
+    document.getElementById('kpi-tcm-total').textContent = tcm.length + ' pessoas';
+    const porCategoria = {};
+    tcm.forEach(c => {
+      const cat = c.categoria || 'Sem categoria';
+      porCategoria[cat] = (porCategoria[cat] || 0) + 1;
+    });
+    document.getElementById('tbody-tcm-categorias').innerHTML =
+      Object.entries(porCategoria).map(([cat, n]) => `<tr><td>${cat}</td><td>${n}</td></tr>`).join('') ||
+      `<tr><td colspan="2" class="text-center text-muted">Sem dados</td></tr>`;
+  }
+
+  init();
+</script>
+</body>
+</html>
