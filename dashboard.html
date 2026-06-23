@@ -25,6 +25,16 @@
       <div class="kpi-value" id="kpi-total">—</div>
       <div class="kpi-sub" id="kpi-total-sub">colaboradores activos</div>
     </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Danmo TCM</div>
+      <div class="kpi-value" id="kpi-tcm-geral">—</div>
+      <div class="kpi-sub">colaboradores activos</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Inativos</div>
+      <div class="kpi-value" id="kpi-inativos">—</div>
+      <div class="kpi-sub">desvinculados / sem empresa definida</div>
+    </div>
   </div>
 
   <div id="secao-porto">
@@ -70,7 +80,15 @@
   let TODOS = [];
 
   async function init() {
-    TODOS = await db.query('collaborators', 'select=*&active=eq.true&order=name.asc');
+    TODOS = await db.query('collaborators', 'select=*&order=name.asc');
+
+    const ativos    = TODOS.filter(c => c.active);
+    const inativos  = TODOS.filter(c => !c.active);
+    const tcmAtivos = ativos.filter(c => c.empresa_origem === 'TCM');
+
+    document.getElementById('kpi-tcm-geral').textContent = tcmAtivos.length;
+    document.getElementById('kpi-inativos').textContent  = inativos.length;
+
     filtrar('todos');
   }
 
@@ -78,7 +96,7 @@
     document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
     document.querySelector(`.btn-filtro[data-filtro="${tipo}"]`).classList.add('active');
 
-    let lista = TODOS.filter(c => c.empresa_origem); // ignora os 7 sem empresa definida ainda
+    let lista = TODOS.filter(c => c.active && c.empresa_origem); // só activos, ignora os sem empresa definida
     if (tipo === 'Porto') lista = lista.filter(c => c.empresa_origem === 'Porto');
     if (tipo === 'TCM')   lista = lista.filter(c => c.empresa_origem === 'TCM');
 
