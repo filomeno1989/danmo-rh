@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DANMO RH | Colaboradores</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <main class="main">
+
+    <div class="flex-between" style="flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+      <div>
+        <div class="page-title">👤 Colaboradores</div>
+        <div class="page-sub" id="subtitulo-contagem">A carregar...</div>
+      </div>
+      <button class="btn btn-primary" onclick="abrirModalNovo()">➕ Novo Colaborador</button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card" style="padding:16px;">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Pesquisar</label>
+          <input type="text" id="pesquisa" placeholder="🔍 Nome, código ou função..." oninput="filtrarTabela()" />
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="filtro-status" onchange="filtrarTabela()">
+            <option value="">Todos</option>
+            <option value="true">Activos</option>
+            <option value="false">Inactivos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Empresa</label>
+          <select id="filtro-empresa" onchange="filtrarTabela()">
+            <option value="">Todas</option>
+            <option value="Porto">Danmo Porto</option>
+            <option value="TCM">Danmo TCM</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Setor</label>
+          <select id="filtro-setor" onchange="filtrarTabela()">
+            <option value="">Todos</option>
+            <option>Mecânica</option><option>Elétrica</option><option>Serralharia</option>
+            <option>Pneumática</option><option>Administração Oficinal</option>
+            <option>Departamento Técnico</option><option>Direção Geral</option><option>HST</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Vínculo</label>
+          <select id="filtro-vinculo" onchange="filtrarTabela()">
+            <option value="">Todos</option>
+            <option value="contratado">Contratados</option>
+            <option value="transferido">Transferidos</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th><th>Nome</th><th>Função</th><th>Setor</th>
+              <th>Empresa</th><th>Vínculo</th><th>Admissão</th>
+              <th>Tempo de Serviço</th><th>Status</th><th>Acções</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-corpo"></tbody>
+        </table>
+      </div>
+      <div id="sem-resultados" style="display:none;text-align:center;padding:2rem;color:var(--text2)">
+        Nenhum colaborador encontrado.
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ══════════════════════════════════════════
+       MODAL — FORMULÁRIO (novo / editar)
+  ══════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modal-ficha" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;align-items:center;justify-content:center;">
+    <div class="card" style="max-width:760px;width:92%;max-height:88vh;overflow-y:auto;">
+      <div class="flex-between" style="margin-bottom:16px;">
+        <span class="card-title" id="modal-ficha-titulo" style="margin:0;">Ficha do Colaborador</span>
+        <button class="btn btn-ghost btn-sm" onclick="fecharModal('modal-ficha')">✕</button>
+      </div>
+
+      <!-- Empresa -->
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Empresa *</label>
+        <div class="flex gap-12">
+          <label class="flex gap-8" style="cursor:pointer;font-weight:400;text-transform:none;">
+            <input type="radio" name="empresa_origem" value="Porto" onchange="toggleEmpresa()" checked /> Danmo Porto
+          </label>
+          <label class="flex gap-8" style="cursor:pointer;font-weight:400;text-transform:none;">
+            <input type="radio" name="empresa_origem" value="TCM" onchange="toggleEmpresa()" /> Danmo TCM
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group" id="campo-setor" style="margin-bottom:14px;">
+        <label>Setor (Danmo Porto) *</label>
+        <select id="f-setor">
+          <option value="">— Seleccionar —</option>
+          <option>Mecânica</option><option>Elétrica</option><option>Serralharia</option>
+          <option>Pneumática</option><option>Administração Oficinal</option>
+          <option>Departamento Técnico</option><option>Direção Geral</option><option>HST</option>
+        </select>
+      </div>
+
+      <!-- Vínculo -->
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Tipo de Vínculo *</label>
+        <div class="flex gap-12">
+          <label class="flex gap-8" style="cursor:pointer;font-weight:400;text-transform:none;">
+            <input type="radio" name="tipo_vinculo" value="contratado" onchange="toggleTransferido()" checked /> Contratado directamente
+          </label>
+          <label class="flex gap-8" style="cursor:pointer;font-weight:400;text-transform:none;">
+            <input type="radio" name="tipo_vinculo" value="transferido" onchange="toggleTransferido()" /> Transferido do Grupo
+          </label>
+        </div>
+      </div>
+
+      <div id="secao-transferido" style="display:none;">
+        <div class="form-grid mb-2">
+          <div class="form-group">
+            <label>Empresa do Grupo (Origem) *</label>
+            <input type="text" id="f-empresa-grupo-origem" placeholder="Ex: Mesquita Transitários" />
+          </div>
+          <div class="form-group">
+            <label>Data de Admissão no Grupo *</label>
+            <input type="date" id="f-data-admissao-grupo" onchange="calcularTempos()" />
+          </div>
+        </div>
+      </div>
+
+      <hr style="border-color:var(--border);margin:14px 0;" />
+
+      <p style="color:var(--amber);font-weight:700;font-size:13px;margin-bottom:10px;">▸ Dados Pessoais</p>
+      <div class="form-grid mb-2">
+        <div class="form-group">
+          <label>Nº Trabalhador *</label>
+          <input type="text" id="f-code" placeholder="Ex: DM0013" />
+        </div>
+        <div class="form-group">
+          <label>Nome Completo *</label>
+          <input type="text" id="f-name" placeholder="Nome completo" />
+        </div>
+        <div class="form-group">
+          <label>Função / Cargo *</label>
+          <input type="text" id="f-categoria" placeholder="Ex: Mecânico, Electricista..." />
+        </div>
+      </div>
+
+      <div class="form-grid mb-2">
+        <div class="form-group">
+          <label>Data de Nascimento</label>
+          <input type="date" id="f-nascimento" onchange="calcularIdadeAuto()" />
+        </div>
+        <div class="form-group">
+          <label>Idade</label>
+          <input type="text" id="f-idade" readonly placeholder="Automático" style="opacity:.6" />
+        </div>
+        <div class="form-group">
+          <label>Naturalidade</label>
+          <input type="text" id="f-naturalidade" placeholder="Cidade / Província" />
+        </div>
+      </div>
+
+      <div class="form-grid mb-2">
+        <div class="form-group">
+          <label>Mês de Férias</label>
+          <select id="f-mes-ferias">
+            <option value="">— Seleccionar —</option>
+            <option>Janeiro</option><option>Fevereiro</option><option>Março</option>
+            <option>Abril</option><option>Maio</option><option>Junho</option>
+            <option>Julho</option><option>Agosto</option><option>Setembro</option>
+            <option>Outubro</option><option>Novembro</option><option>Dezembro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estado Civil</label>
+          <select id="f-estado-civil">
+            <option value="">— Seleccionar —</option>
+            <option>Solteiro(a)</option><option>Casado(a)</option>
+            <option>União de Facto</option><option>Divorciado(a)</option><option>Viúvo(a)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nº de Dependentes</label>
+          <input type="number" id="f-dependentes" min="0" placeholder="0" />
+        </div>
+      </div>
+
+      <div class="form-group mb-2">
+        <label>Endereço / Morada</label>
+        <input type="text" id="f-endereco" placeholder="Bairro, Rua, Quarteirão..." />
+      </div>
+
+      <hr style="border-color:var(--border);margin:14px 0;" />
+      <p style="color:var(--amber);font-weight:700;font-size:13px;margin-bottom:10px;">▸ Admissão e Serviço</p>
+
+      <div class="form-grid mb-2">
+        <div class="form-group">
+          <label>Data de Admissão na Danmo *</label>
+          <input type="date" id="f-data-admissao-danmo" onchange="calcularTempos()" />
+        </div>
+        <div class="form-group">
+          <label>Tempo na Danmo</label>
+          <input type="text" id="f-tempo-danmo" readonly placeholder="Automático" style="opacity:.6" />
+        </div>
+      </div>
+
+      <div id="secao-tempo-grupo" style="display:none;" class="form-grid mb-2">
+        <div class="form-group">
+          <label>Tempo no Grupo antes da Danmo</label>
+          <input type="text" id="f-tempo-grupo-antes" readonly style="opacity:.6" />
+        </div>
+        <div class="form-group">
+          <label>Tempo Total no Grupo</label>
+          <input type="text" id="f-tempo-total" readonly style="opacity:.6;font-weight:700;color:var(--amber);" />
+        </div>
+      </div>
+
+      <div class="form-grid mb-2">
+        <div class="form-group">
+          <label>Status *</label>
+          <select id="f-active" onchange="toggleInativo()">
+            <option value="true">Activo</option>
+            <option value="false">Inactivo</option>
+          </select>
+        </div>
+        <div class="form-group" id="campo-data-inativo" style="display:none;">
+          <label>Data de Desvinculamento *</label>
+          <input type="date" id="f-data-inativo" onchange="calcularTempos()" />
+        </div>
+      </div>
+
+      <div class="form-group mb-2">
+        <label>Histórico de Funções / Mudanças de Setor</label>
+        <textarea id="f-historico" placeholder="Ex: 2019 - Admitido como Ajudante de Mecânico; 2022 - Promovido a Técnico Mecânico..."></textarea>
+      </div>
+
+      <hr style="border-color:var(--border);margin:14px 0;" />
+      <p style="color:var(--amber);font-weight:700;font-size:13px;margin-bottom:10px;">▸ Documentos</p>
+      <div class="form-grid mb-2">
+        <div class="form-group"><label>B.I. Nº</label><input type="text" id="f-bi" /></div>
+        <div class="form-group"><label>INSS Nº</label><input type="text" id="f-inss" /></div>
+        <div class="form-group"><label>NUIT Nº</label><input type="text" id="f-nuit" /></div>
+      </div>
+      <div class="form-group mb-2">
+        <label>Link do Contrato (Drive, etc.)</label>
+        <input type="url" id="f-contrato" placeholder="https://..." />
+      </div>
+
+      <hr style="border-color:var(--border);margin:14px 0;" />
+      <p style="color:var(--amber);font-weight:700;font-size:13px;margin-bottom:10px;">▸ Contactos</p>
+      <div class="form-grid mb-2">
+        <div class="form-group"><label>Contacto 1</label><input type="tel" id="f-contacto1" placeholder="8XX XXX XXX" /></div>
+        <div class="form-group"><label>Contacto 2</label><input type="tel" id="f-contacto2" placeholder="8XX XXX XXX" /></div>
+        <div class="form-group"><label>Email</label><input type="email" id="f-email" /></div>
+      </div>
+
+      <hr style="border-color:var(--border);margin:14px 0;" />
+      <p style="color:var(--amber);font-weight:700;font-size:13px;margin-bottom:10px;">▸ Saúde</p>
+      <div class="form-grid mb-2">
+        <div class="form-group">
+          <label>Grupo Sanguíneo</label>
+          <select id="f-grupo-sanguineo">
+            <option value="">— Desconhecido —</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:span 2;">
+          <label>Doença Crónica</label>
+          <input type="text" id="f-doenca" placeholder="Ex: Hipertensão, Diabetes, Asma..." />
+        </div>
+      </div>
+
+      <hr style="border-color:var(--border);margin:14px 0;" />
+      <div class="form-group mb-2">
+        <label>Observações Gerais</label>
+        <textarea id="f-observacoes" placeholder="Notas relevantes sobre o colaborador..."></textarea>
+      </div>
+
+      <div class="flex-between" style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px;">
+        <button class="btn btn-danger btn-sm" id="btn-apagar" onclick="confirmarApagar()" style="display:none;">🗑 Apagar</button>
+        <div class="flex gap-8">
+          <button class="btn btn-ghost" onclick="fecharModal('modal-ficha')">Cancelar</button>
+          <button class="btn btn-primary" onclick="guardarFicha()">💾 Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="tema.js"></script>
+  <script src="supabase.js"></script>
+  <script src="auth.js"></script>
+  <script src="utils.js"></script>
+  <script src="nav.js"></script>
+  <script>
+    montarNavbar('colaboradores');
+
+    let colaboradores = [];
+    let colaboradoresFiltrados = [];
+    let idActual = null;
+
+    document.addEventListener('DOMContentLoaded', carregarColaboradores);
+
+    // ── Carregar ──────────────────────────────────────────
+    async function carregarColaboradores() {
+      try {
+        colaboradores = await db.query('collaborators', 'select=*&order=name.asc');
+      } catch (e) {
+        showToast('Erro ao carregar: ' + e.message, 'error');
+        return;
+      }
+      colaboradoresFiltrados = [...colaboradores];
+      renderTabela();
+
+      const activos  = colaboradores.filter(c => c.active !== false).length;
+      const inativos = colaboradores.filter(c => c.active === false).length;
+      document.getElementById('subtitulo-contagem').textContent =
+        `${activos} activos · ${inativos} inactivos · ${colaboradores.length} total`;
+    }
+
+    // ── Render tabela ─────────────────────────────────────
+    function renderTabela() {
+      const tbody  = document.getElementById('tabela-corpo');
+      const semRes = document.getElementById('sem-resultados');
+
+      if (colaboradoresFiltrados.length === 0) {
+        tbody.innerHTML = '';
+        semRes.style.display = 'block';
+        return;
+      }
+      semRes.style.display = 'none';
+
+      tbody.innerHTML = colaboradoresFiltrados.map(c => {
+        const tempoDanmo = calcularTempoServico(c.data_admissao_danmo || c.data_admissao, c.active === false ? c.data_inativo : null);
+
+        const statusBadge = c.active !== false
+          ? '<span class="badge badge-green">Activo</span>'
+          : '<span class="badge badge-gray">Inactivo</span>';
+
+        const vinculoBadge = c.tipo_vinculo === 'transferido'
+          ? '<span class="badge badge-blue">Transferido</span>'
+          : '<span class="badge badge-gray">Contratado</span>';
+
+        return `
+          <tr>
+            <td><code style="color:var(--amber);">${c.code ?? '—'}</code></td>
+            <td>
+              <strong>${c.name ?? '—'}</strong>
+              ${c.doenca_cronica ? `<div style="font-size:11px;color:var(--text2);">${c.doenca_cronica}</div>` : ''}
+            </td>
+            <td>${c.categoria ?? '—'}</td>
+            <td>${c.setor ?? '—'}</td>
+            <td>${c.empresa_origem ?? '—'}</td>
+            <td>${vinculoBadge}</td>
+            <td>${fmtData(c.data_admissao_danmo || c.data_admissao)}</td>
+            <td style="font-size:13px;">${tempoDanmo}</td>
+            <td>${statusBadge}</td>
+            <td>
+              <div class="flex gap-8">
+                <button class="btn btn-ghost btn-sm" onclick="abrirModalEditar(${c.id})">✏️</button>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    // ── Filtrar ───────────────────────────────────────────
+    function filtrarTabela() {
+      const termo   = document.getElementById('pesquisa').value.toLowerCase();
+      const status  = document.getElementById('filtro-status').value;
+      const empresa = document.getElementById('filtro-empresa').value;
+      const setor   = document.getElementById('filtro-setor').value;
+      const vinculo = document.getElementById('filtro-vinculo').value;
+
+      colaboradoresFiltrados = colaboradores.filter(c => {
+        const matchTermo = !termo ||
+          (c.name || '').toLowerCase().includes(termo) ||
+          (c.code || '').toLowerCase().includes(termo) ||
+          (c.categoria || '').toLowerCase().includes(termo);
+
+        const isActivo = c.active !== false;
+        const matchStatus  = !status  || (status === 'true' && isActivo) || (status === 'false' && !isActivo);
+        const matchEmpresa = !empresa || c.empresa_origem === empresa;
+        const matchSetor   = !setor   || c.setor === setor;
+        const matchVinculo = !vinculo || (c.tipo_vinculo || 'contratado') === vinculo;
+
+        return matchTermo && matchStatus && matchEmpresa && matchSetor && matchVinculo;
+      });
+
+      renderTabela();
+    }
+
+    // ── Cálculo de tempos ─────────────────────────────────
+    function calcularTempoServico(dataInicio, dataFim) {
+      if (!dataInicio) return '—';
+      const inicio = new Date(dataInicio);
+      const fim    = dataFim ? new Date(dataFim) : new Date();
+      let anos  = fim.getFullYear() - inicio.getFullYear();
+      let meses = fim.getMonth()    - inicio.getMonth();
+      if (meses < 0) { anos--; meses += 12; }
+      return `${anos}a ${meses}m`;
+    }
+
+    function calcularTempoLongo(dataInicio, dataFim) {
+      if (!dataInicio) return '—';
+      const inicio = new Date(dataInicio);
+      const fim    = dataFim ? new Date(dataFim) : new Date();
+      let anos  = fim.getFullYear() - inicio.getFullYear();
+      let meses = fim.getMonth()    - inicio.getMonth();
+      let dias  = fim.getDate()     - inicio.getDate();
+      if (dias  < 0) { meses--; dias  += 30; }
+      if (meses < 0) { anos--;  meses += 12; }
+      return `${anos} ano${anos !== 1 ? 's' : ''}, ${meses} mês${meses !== 1 ? 'es' : ''} e ${dias} dia${dias !== 1 ? 's' : ''}`;
+    }
+
+    // ── Modal novo / editar ────────────────────────────────
+    function abrirModalNovo() {
+      idActual = null;
+      limparFormulario();
+      document.getElementById('modal-ficha-titulo').textContent = '➕ Novo Colaborador';
+      document.getElementById('btn-apagar').style.display = 'none';
+      abrirModal('modal-ficha');
+    }
+
+    function abrirModalEditar(id) {
+      idActual = id;
+      const c = colaboradores.find(x => x.id === id);
+      if (!c) return;
+      preencherFormulario(c);
+      document.getElementById('modal-ficha-titulo').textContent = `✏️ Editar — ${c.name}`;
+      document.getElementById('btn-apagar').style.display = 'inline-flex';
+      abrirModal('modal-ficha');
+    }
+
+    function limparFormulario() {
+      ['f-code','f-name','f-categoria','f-naturalidade','f-nascimento','f-idade',
+       'f-data-admissao-danmo','f-data-admissao-grupo','f-empresa-grupo-origem',
+       'f-tempo-danmo','f-tempo-grupo-antes','f-tempo-total',
+       'f-bi','f-inss','f-nuit','f-contacto1','f-contacto2','f-email',
+       'f-doenca','f-observacoes','f-data-inativo','f-setor',
+       'f-endereco','f-dependentes','f-historico','f-contrato'
+      ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
+      document.getElementById('f-active').value = 'true';
+      document.getElementById('f-mes-ferias').value = '';
+      document.getElementById('f-estado-civil').value = '';
+      document.getElementById('f-grupo-sanguineo').value = '';
+      document.querySelector('input[name="empresa_origem"][value="Porto"]').checked = true;
+      document.querySelector('input[name="tipo_vinculo"][value="contratado"]').checked = true;
+      toggleEmpresa();
+      toggleTransferido();
+      toggleInativo();
+    }
+
+    function preencherFormulario(c) {
+      document.getElementById('f-code').value       = c.code ?? '';
+      document.getElementById('f-name').value       = c.name ?? '';
+      document.getElementById('f-categoria').value  = c.categoria ?? '';
+      document.getElementById('f-setor').value      = c.setor ?? '';
+      document.getElementById('f-naturalidade').value = c.naturalidade ?? '';
+      document.getElementById('f-nascimento').value  = c.data_nascimento ? c.data_nascimento.split('T')[0] : '';
+      document.getElementById('f-mes-ferias').value  = c.mes_ferias ?? '';
+      document.getElementById('f-estado-civil').value = c.estado_civil ?? '';
+      document.getElementById('f-dependentes').value  = c.num_dependentes ?? '';
+      document.getElementById('f-endereco').value      = c.endereco ?? '';
+      document.getElementById('f-historico').value     = c.historico_funcoes ?? '';
+      document.getElementById('f-contrato').value       = c.contrato_url ?? '';
+      document.getElementById('f-data-admissao-danmo').value =
+        c.data_admissao_danmo ? c.data_admissao_danmo.split('T')[0]
+        : c.data_admissao ? c.data_admissao.split('T')[0] : '';
+      document.getElementById('f-data-admissao-grupo').value =
+        c.data_admissao_grupo ? c.data_admissao_grupo.split('T')[0] : '';
+      document.getElementById('f-empresa-grupo-origem').value = c.empresa_grupo_origem ?? '';
+      document.getElementById('f-active').value     = c.active === false ? 'false' : 'true';
+      document.getElementById('f-data-inativo').value =
+        c.data_inativo ? c.data_inativo.split('T')[0] : '';
+      document.getElementById('f-bi').value         = c.bi_numero ?? '';
+      document.getElementById('f-inss').value       = c.inss_numero ?? '';
+      document.getElementById('f-nuit').value       = c.nuit_numero ?? '';
+      document.getElementById('f-contacto1').value  = c.contacto_1 ?? '';
+      document.getElementById('f-contacto2').value  = c.contacto_2 ?? '';
+      document.getElementById('f-email').value      = c.email ?? '';
+      document.getElementById('f-grupo-sanguineo').value = c.grupo_sanguineo ?? '';
+      document.getElementById('f-doenca').value     = c.doenca_cronica ?? '';
+      document.getElementById('f-observacoes').value = c.observacoes_gerais ?? '';
+
+      const empresa = c.empresa_origem || 'Porto';
+      const empresaEl = document.querySelector(`input[name="empresa_origem"][value="${empresa}"]`);
+      if (empresaEl) empresaEl.checked = true;
+
+      const vinculo = c.tipo_vinculo || 'contratado';
+      const radioEl = document.querySelector(`input[name="tipo_vinculo"][value="${vinculo}"]`);
+      if (radioEl) radioEl.checked = true;
+
+      toggleEmpresa();
+      toggleTransferido();
+      toggleInativo();
+      calcularIdadeAuto();
+      calcularTempos();
+    }
+
+    // ── Toggles ───────────────────────────────────────────
+    function toggleEmpresa() {
+      const isPorto = document.querySelector('input[name="empresa_origem"]:checked').value === 'Porto';
+      document.getElementById('campo-setor').style.display = isPorto ? 'block' : 'none';
+    }
+
+    function toggleTransferido() {
+      const isTransf = document.querySelector('input[name="tipo_vinculo"]:checked').value === 'transferido';
+      document.getElementById('secao-transferido').style.display = isTransf ? 'block' : 'none';
+      document.getElementById('secao-tempo-grupo').style.display = isTransf ? 'grid' : 'none';
+      calcularTempos();
+    }
+
+    function toggleInativo() {
+      const isInativo = document.getElementById('f-active').value === 'false';
+      document.getElementById('campo-data-inativo').style.display = isInativo ? 'block' : 'none';
+      calcularTempos();
+    }
+
+    // ── Cálculos automáticos ──────────────────────────────
+    function calcularIdadeAuto() {
+      const nasc = document.getElementById('f-nascimento').value;
+      document.getElementById('f-idade').value = nasc ? calcularIdade(nasc) + ' anos' : '';
+    }
+
+    function calcularTempos() {
+      const admDanmo  = document.getElementById('f-data-admissao-danmo').value;
+      const admGrupo  = document.getElementById('f-data-admissao-grupo').value;
+      const isInativo = document.getElementById('f-active').value === 'false';
+      const dataFim    = isInativo ? (document.getElementById('f-data-inativo').value || null) : null;
+      const isTransf   = document.querySelector('input[name="tipo_vinculo"]:checked')?.value === 'transferido';
+
+      if (admDanmo) {
+        document.getElementById('f-tempo-danmo').value = calcularTempoLongo(admDanmo, dataFim);
+      }
+      if (isTransf && admGrupo && admDanmo) {
+        document.getElementById('f-tempo-grupo-antes').value = calcularTempoLongo(admGrupo, admDanmo);
+        document.getElementById('f-tempo-total').value       = calcularTempoLongo(admGrupo, dataFim);
+      }
+    }
+
+    // ── Guardar ───────────────────────────────────────────
+    async function guardarFicha() {
+      const code      = document.getElementById('f-code').value.trim();
+      const name      = document.getElementById('f-name').value.trim();
+      const categoria = document.getElementById('f-categoria').value.trim();
+      const admDanmo  = document.getElementById('f-data-admissao-danmo').value;
+      const isActive  = document.getElementById('f-active').value === 'true';
+      const vinculo   = document.querySelector('input[name="tipo_vinculo"]:checked').value;
+      const empresa   = document.querySelector('input[name="empresa_origem"]:checked').value;
+      const setor     = document.getElementById('f-setor').value;
+
+      if (!code || !name || !categoria || !admDanmo) {
+        showToast('Preenche os campos obrigatórios (*)', 'warning');
+        return;
+      }
+      if (empresa === 'Porto' && !setor) {
+        showToast('Selecciona o Setor (obrigatório para Danmo Porto)', 'warning');
+        return;
+      }
+      if (vinculo === 'transferido') {
+        const empresaGrupo = document.getElementById('f-empresa-grupo-origem').value.trim();
+        const admGrupo     = document.getElementById('f-data-admissao-grupo').value;
+        if (!empresaGrupo || !admGrupo) {
+          showToast('Indica a empresa do grupo e a data de admissão no grupo', 'warning');
+          return;
+        }
+      }
+      if (!isActive && !document.getElementById('f-data-inativo').value) {
+        showToast('Indica a data de desvinculamento', 'warning');
+        return;
+      }
+
+      const payload = {
+        code, name, categoria,
+        setor:                empresa === 'Porto' ? setor : null,
+        empresa_origem:       empresa,
+        naturalidade:         document.getElementById('f-naturalidade').value.trim() || null,
+        data_nascimento:      document.getElementById('f-nascimento').value || null,
+        mes_ferias:           document.getElementById('f-mes-ferias').value || null,
+        estado_civil:         document.getElementById('f-estado-civil').value || null,
+        num_dependentes:      document.getElementById('f-dependentes').value
+          ? parseInt(document.getElementById('f-dependentes').value) : null,
+        endereco:             document.getElementById('f-endereco').value.trim() || null,
+        historico_funcoes:    document.getElementById('f-historico').value.trim() || null,
+        contrato_url:         document.getElementById('f-contrato').value.trim() || null,
+        tipo_vinculo:         vinculo,
+        data_admissao_danmo:  admDanmo,
+        data_admissao_grupo:  vinculo === 'transferido'
+          ? (document.getElementById('f-data-admissao-grupo').value || null) : null,
+        empresa_grupo_origem: vinculo === 'transferido'
+          ? (document.getElementById('f-empresa-grupo-origem').value.trim() || null) : null,
+        active:               isActive,
+        data_inativo:         !isActive ? (document.getElementById('f-data-inativo').value || null) : null,
+        bi_numero:            document.getElementById('f-bi').value.trim() || null,
+        inss_numero:          document.getElementById('f-inss').value.trim() || null,
+        nuit_numero:          document.getElementById('f-nuit').value.trim() || null,
+        contacto_1:           document.getElementById('f-contacto1').value.trim() || null,
+        contacto_2:           document.getElementById('f-contacto2').value.trim() || null,
+        email:                document.getElementById('f-email').value.trim() || null,
+        grupo_sanguineo:      document.getElementById('f-grupo-sanguineo').value || null,
+        doenca_cronica:       document.getElementById('f-doenca').value.trim() || null,
+        observacoes_gerais:   document.getElementById('f-observacoes').value.trim() || null,
+      };
+
+      try {
+        if (idActual) {
+          await db.update('collaborators', idActual, payload);
+        } else {
+          await db.insert('collaborators', payload);
+        }
+      } catch (e) {
+        showToast('Erro ao guardar: ' + e.message, 'error');
+        return;
+      }
+
+      showToast(idActual ? 'Ficha actualizada!' : 'Colaborador adicionado!', 'success');
+      fecharModal('modal-ficha');
+      await carregarColaboradores();
+    }
+
+    // ── Apagar ────────────────────────────────────────────
+    async function confirmarApagar() {
+      const c = colaboradores.find(x => x.id === idActual);
+      if (!c) return;
+      const ok = await confirmar(`Apagar permanentemente "${c.name}"?\nEsta acção não pode ser desfeita.`);
+      if (!ok) return;
+      try {
+        await db.delete('collaborators', idActual);
+      } catch (e) {
+        showToast('Erro ao apagar: ' + e.message, 'error');
+        return;
+      }
+      showToast('Colaborador apagado.', 'success');
+      fecharModal('modal-ficha');
+      await carregarColaboradores();
+    }
+
+    // ── Modais ────────────────────────────────────────────
+    function abrirModal(id)  { document.getElementById(id).style.display = 'flex'; }
+    function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', e => {
+        if (e.target === overlay) overlay.style.display = 'none';
+      });
+    });
+  </script>
+
+</body>
+</html>
